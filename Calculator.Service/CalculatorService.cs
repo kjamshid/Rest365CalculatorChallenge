@@ -13,7 +13,7 @@ namespace Calculator.Service
     public class CalculatorService : ICalculatorService
     {
         private static Regex customSingleCharDelimiterRegex = new Regex(@"^\/\/(?<customSigleCharDelimiter>.)\n.+", RegexOptions.Compiled);
-        private static Regex customMultiCharDelimiterRegex = new Regex(@"^\/\/\[(?<customDelimiter>.+)\]\n.+", RegexOptions.Compiled);
+        private static Regex customMultiCharDelimitersRegex = new Regex(@"^\/\/(?<customMultiCharDelimiters>\[.+\])+\n.+", RegexOptions.Singleline | RegexOptions.Compiled);
         // Variable declartion to be set in constructor
         private const string DefaultDelimeter = ",";
         private readonly string PredefinedDelimeters = null;
@@ -38,12 +38,12 @@ namespace Calculator.Service
 
         /// <summary>
         /// This method will take the input entered from the user and will apply the following business logic
-        /// 1) Support a maximum of 2 numbers using a comma delimiter. Throw an exception when more than 2 numbers are provided
-        ///         examples: 20 will return 20; 1,5000 will return 5001; 4,-3 will return 1
-        ///         empty input or missing numbers should be converted to 0
-        ///         invalid numbers should be converted to 0 e.g. 5,tytyt will return 5
+        /// 1) Try to parse user custom defined single charachter delimeter
+        /// 2) Try to parse user custom defined multi charachter delimeters
+        /// 3) Combine all custom delimiters above with predefined delimiters
+        /// 4) Parse the input and grab the valid integer numbers and return them
         /// </summary>
-        /// <param name="input">user input</param>
+        /// <param name="input">user raw input</param>
         /// <returns>an array of valid integers</returns>
         public List<int> ParseValidNumbersFromInput(string input)
         {
@@ -52,17 +52,28 @@ namespace Calculator.Service
 
             List<string> inputEntries = new List<string>();
 
+            List<string> DelimiterList = new List<string>();
             if (!string.IsNullOrEmpty(input))
             {
-                var customMultiCharDelimiter = ParseMultiCharCustomDelimiter(input);
+                // combining all the delimiters into one string array list
                 var customSingleCharDelimiter = ParseSingleCharCustomDelimiter(input);
+                
+                if (customSingleCharDelimiter != string.Empty)
+                {
+                    DelimiterList.Add(customSingleCharDelimiter);
+                }
+                else
+                {
+                    DelimiterList.AddRange(ParseMultiCharCustomDelimiters(input));
+                }
+
+                DelimiterList.AddRange(PredefinedDelimeters.Split('|'));
 
                 // parse the input using the config delimeter list along with custom user defined ones above
-                inputEntries.AddRange(input.Split(string.Concat(PredefinedDelimeters, "|", customMultiCharDelimiter, "|", customSingleCharDelimiter).Split('|'), StringSplitOptions.None));
+                inputEntries.AddRange(input.Split(DelimiterList.ToArray(), StringSplitOptions.None));
             }
 
             List<int> numberEntries = new List<int>();
-
             int validNumber;
             
             // Checking for valid inputs, if not a valid integer converting to default value (ex. 0)
@@ -100,7 +111,7 @@ namespace Calculator.Service
             string customDelimiter = string.Empty;
 
             // minimum 4 characters needed to define a custom single character delimiter
-            if(input.Length > 4)
+            if((input ?? string.Empty).Length > 4)
             {
                 //Matching the custom delimiter regex
                 Match delimiterMatch = customSingleCharDelimiterRegex.Match(input);
@@ -109,7 +120,7 @@ namespace Calculator.Service
                 {
                     // retreiving the delimiter and removing the 4 characters that no longer is needed
                     customDelimiter = delimiterMatch.Groups["customSigleCharDelimiter"].Value;
-                    input.Replace(string.Concat(@"//", customDelimiter, "\n"), string.Empty);
+                    input = input.Replace(string.Concat(@"//", customDelimiter, "\n"), string.Empty);
                 }
             }
 
@@ -119,36 +130,43 @@ namespace Calculator.Service
 
         /// <summary>
         /// Parsing custom user define custom delimiter
-        /// try to detect delimiter of any length in following format  //[{delimiter}]\n{numbers}
+        /// try to detect user defined custom delimiter(s) of any length in following formats:
+        ///                     //[{delimiter}]\n{numbers}
+        ///                     //[{delimiter1}][{delimiter2}]...\n{numbers}
         /// 
         ///     example: //[***]\n11***22***33 will return 66
+        ///     example: //[*][!!][r9r]\n11r9r22*hh*33!!44 will return 110
         /// 
         ///  Please note that since there is a minimum of 6 characters needed to define a delimiter, the string
-        ///  obviously need to be longer than 6 characters to define a number as well. The delimiter is matched
-        ///  by following regex: ^\/\/\[(?<customDelimiter>.+)\]\n.+
+        ///  obviously need to be longer than 6 characters to define a number as well. 
+        ///  in order to acheive this The delimiter is matched against the following Regex and the value is extracted
+        ///  from the matching group:
+        ///  
+        ///         regex: ^\/\/(?<customMultiCharDelimiters>\[.+\])+\n.+
         ///     
         ///   All the characters used to define a delimiter is then removed in the string because these are
-        ///   not needed for the further processing
+        ///   not needed for the further calculation processing
         /// </summary>
-        /// <param name="input">user input (the custom delimiter is removed if regex is matched)</param>
-        /// <returns>multi characters delimeter</returns>
-        public string ParseMultiCharCustomDelimiter(string input)
+        /// <param name="input">user input (the custom delimiter(s) is removed if regex is matched)</param>
+        /// <returns>list of multi characters custom delimeter(s)</returns>
+        public List<string> ParseMultiCharCustomDelimiters(string input)
         {
-            string customDelimiter = string.Empty;
+            List<string> customDelimiters = new List<string>();
 
             // minimum 6 characters needed to define a custom single character delimiter
-            if (input.Length > 6)
+            if ((input ?? string.Empty).Length > 6)
             {
-                Match delimiterMatch = customMultiCharDelimiterRegex.Match(input);
-                if (delimiterMatch.Success)
+                Match delimiterMatches = customMultiCharDelimitersRegex.Match(input);
+                if (delimiterMatches.Success)
                 {
-                    // retreiving the delimiter and removing the 6 characters that no longer is needed
-                    customDelimiter = delimiterMatch.Groups["customDelimiter"].Value;
-                    input.Replace(string.Concat(@"//[", customDelimiter, "]\n"), string.Empty);
+                    List<char> delimChars = new List<char>();
+                    input = input.Replace(string.Concat(@"//", delimiterMatches.Groups["customMultiCharDelimiters"].Value, "\n"), string.Empty);
+                    customDelimiters = (delimiterMatches.Groups["customMultiCharDelimiters"].Value ?? string.Empty).TrimStart('[').TrimEnd(']').Split("][", StringSplitOptions.RemoveEmptyEntries).ToList();
                 }
             }
 
-            return customDelimiter;
+
+            return customDelimiters;
         }
 
         /// <summary>

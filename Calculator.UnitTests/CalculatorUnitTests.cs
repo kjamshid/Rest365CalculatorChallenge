@@ -264,7 +264,7 @@ namespace Calculator.UnitTests
         [TestCase("//[###]\n1###2###3,4,###5\n", 15)]
         [TestCase("//[###]\n1###2###3,4,######5\n6,,", 21)]
         [TestCase("//[###]\n1###2###3,4,######5\n6,, ", 21)]
-        public void AddNumber_CustomMultiLengthDelimiter_PositiveTests(string input, int expectedResult)
+        public void AddNumber_CustomMultiLengthDelimiters_PositiveTests(string input, int expectedResult)
         {
             SetServiceProvider();
 
@@ -284,7 +284,7 @@ namespace Calculator.UnitTests
         [TestCase("//[##]\n1#2#3#4,#5", 0)]
         [TestCase("//[***]\n1#2,#\n3,4,#5\n", 7)]
         [TestCase("//[##]\n1###2,hkhkh", 1)]
-        public void AddNumber_CustomMultiLengthDelimiter_NegativeTests(string input, int expectedResult)
+        public void AddNumber_CustomMultiLengthDelimiters_NegativeTests(string input, int expectedResult)
         {
             SetServiceProvider();
 
@@ -294,5 +294,70 @@ namespace Calculator.UnitTests
 
             Assert.AreEqual(total, expectedResult);
         }
+
+        [TestCase("//[#][**]\n", 0)]
+        [TestCase("//[##][!!]\n!!!###", 0)]
+        [TestCase("//[###][***]\n", 0)]
+        [TestCase("//[###][!!!!]\n1", 1)]
+        [TestCase("//{abc][##]\n##abc,\n", 0)]
+        [TestCase("//[###]{!!}\n###!!!", 0)]
+        [TestCase("//[#][abc]\n1#2,abc3#,hkhkh4", 6)]
+        [TestCase("//[***][**]\n1***2#3,hkhkh**9", 10)]
+        [TestCase("//[##][abc][!!]\n1!!2##3abc4##5!!", 15)]
+        [TestCase("//[#][*][ffd]\n1#2*3**#4,#5ffd6,, ", 21)]
+        [TestCase("//[#][!!][***]\n1#2,#\n3,4,#5***6****7,#!!\n", 21)]
+        [TestCase("//[#][*]\n1##2##3##4##5**8*9#*10*11", 53)]
+        [TestCase("//[##][**]\n1##**2,**hkhkh", 3)]
+        [TestCase("//[##][*]\n1##2*3,hkhkh*", 6)]
+        [TestCase("//[##][**]\n1##2**3##4**5", 15)]
+        [TestCase("//[##][!]\n1##2,##\n3,4!5!,6!7\n", 28)]
+        [TestCase("//[###][!!!]\n1###2,hkhkh", 3)]
+        [TestCase("//[###][!!!]\n1###2!!!3,hkhkh", 6)]
+        [TestCase("//[###][abc]\n1###2abc3###4###5abc6", 21)]
+        [TestCase("//[###][**]\n1###2**3###4,**5,", 15)]
+        [TestCase("//[###][**]\n1###2,###\n3,**4,###5**6\n", 21)]
+        [TestCase("//[###][**]\n1###2###3,4,######5\n6**7,,", 28)]
+        [TestCase("//[###][!!]\n1###2###3,4,######5\n6,, !!7", 28)]
+        [TestCase("//[*][!!][r9r]\n11r9r22*hh*33!!44", 110)]
+        public void AddNumber_CustomMultiLengthMultiDelimiters_PositiveTests(string input, int expectedResult)
+        {
+            SetServiceProvider();
+
+            var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
+
+            var total = _calculatorService.AddNumbers(numberEntries);
+
+            Assert.AreEqual(total, expectedResult);
+        }
+
+
+        [TestCase("//[#][**]", 0)]
+        [TestCase("//[##]!!]\n!!!###", 0)]
+        [TestCase("//[##]!!]\n1!!2##3", 0)]
+        [TestCase("//[###][***]\n", 0)]
+        [TestCase("//[###][!!!!]\n1##!!", 0)]
+        [TestCase("//{abcd][###]\n##abc,\n", 0)]
+        [TestCase("//[#][**]\n", 0)]
+        [TestCase("//[##][!!]\n!!!###", 0)]
+        [TestCase("//[###][***]\n", 0)]
+        [TestCase("//[###][!!!!]\n1", 1)]
+        [TestCase("//{abc][##]\n##abc,\n", 0)]
+        [TestCase("//[###]{!!}\n###!!!", 0)]
+        [TestCase("//[###]{!!}\n###!!!1,jlj ", 0)]
+        [TestCase("//[###]{!!}\n##!!!1!2,abcd !!", 0)]
+        [TestCase("//[#][abc]\n1ab2,abd3#,hkhkh4", 0)]
+        [TestCase("//[***][**]\n1,2#3,hkhkh,9", 10)]
+        [TestCase("//[##][abc][!!]\n1,2,3ab!! ,abd2", 3)]
+        public void AddNumber_CustomMultiLengthMultiDelimiters_NegativeTests(string input, int expectedResult)
+        {
+            SetServiceProvider();
+
+            var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
+
+            var total = _calculatorService.AddNumbers(numberEntries);
+
+            Assert.AreEqual(total, expectedResult);
+        }
+
     }
 }
