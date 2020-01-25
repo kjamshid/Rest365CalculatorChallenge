@@ -10,14 +10,14 @@ namespace Calculator.ConsoleApp
 {
     class Program
     {
-        private static IConfigurationRoot configuration = null;
-        private static IServiceProvider serviceProvider = null;
+        private static IConfigurationRoot _configuration = null;
+        private static IServiceProvider _serviceProvider = null;
         static void Main(string[] args)
         {
             ICalculatorService calculatorService = null;
             StartupApp();
 
-            var loggerFactory = ConfigureLogging(configuration);
+            var loggerFactory = ConfigureLogging(_configuration);
             var logger = loggerFactory.CreateLogger<Program>();
 
             logger.LogDebug("Starting application");
@@ -29,11 +29,11 @@ namespace Calculator.ConsoleApp
             try
             {
                 // Calling calcultor serivce to get the sum
-                calculatorService = serviceProvider.GetService<ICalculatorService>();
+                calculatorService = _serviceProvider.GetService<ICalculatorService>();
 
                 var numbers = calculatorService.ParseValidNumbersFromInput(userInput);
 
-                Console.WriteLine($"The addition of the following entries {string.Join(",", numbers)} is {calculatorService.AddNumbers(numbers)}");
+                Console.WriteLine($"The addition of the following entries {string.Join("+", numbers)} is {calculatorService.AddNumbers(numbers)}");
 
                 Console.ReadLine();
             }
@@ -49,12 +49,12 @@ namespace Calculator.ConsoleApp
         /// </summary>
         private static void StartupApp()
         {
-            configuration = LoadAppSettingsConfig();
+            _configuration = LoadAppSettingsConfig();
 
             //setup our Dependency Injection for internal logging, and calculator service
-            serviceProvider = new ServiceCollection()
+            _serviceProvider = new ServiceCollection()
                 .AddLogging()
-                .AddSingleton<IConfiguration>(configuration)
+                .AddSingleton<IConfiguration>(_configuration)
                 .AddSingleton<ICalculatorService, CalculatorService>()
                 .BuildServiceProvider();
         }

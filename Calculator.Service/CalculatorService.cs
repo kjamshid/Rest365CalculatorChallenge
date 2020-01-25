@@ -20,7 +20,7 @@ namespace Calculator.Service
         private readonly bool AllowTwoNumbersMaxConstraint;
         private readonly int MaximumValidNumbersAllowed;
         private readonly int InvalidNumberEntryDefaultValue;
-        private readonly int FilteredUpperBoundValue;
+        private readonly int FilterUpperBoundValue;
         private readonly ILogger<CalculatorService> _logger;
 
         // Will load LoggerFactory and Configuration Root through Dependency injection (on application start up)
@@ -33,7 +33,7 @@ namespace Calculator.Service
             PredefinedDelimeters = configuration.GetValue<string>("AppSettings:InputDelimeters");
             MaximumValidNumbersAllowed = AllowTwoNumbersMaxConstraint ? configuration.GetValue<int>("AppSettings:MaximumValidNumbersAllowed") : 0;
             InvalidNumberEntryDefaultValue = configuration.GetValue<int>("AppSettings:InvalidNumberEntryDefaultValue");
-            FilteredUpperBoundValue = configuration.GetValue<int>("AppSettings:FilteredUpperBoundValue");
+            FilterUpperBoundValue = configuration.GetValue<int>("AppSettings:FilteredUpperBoundValue");
         }
 
         /// <summary>
@@ -41,7 +41,8 @@ namespace Calculator.Service
         /// 1) Try to parse user custom defined single charachter delimeter
         /// 2) Try to parse user custom defined multi charachter delimeters
         /// 3) Combine all custom delimiters above with predefined delimiters
-        /// 4) Parse the input and grab the valid integer numbers and return them
+        /// 4) Parse the input and grab the valid integer numbers
+        /// 5) Remove/Filter the upper bound entry ex: n > 1000 
         /// </summary>
         /// <param name="input">user raw input</param>
         /// <returns>an array of valid integers</returns>
@@ -73,7 +74,7 @@ namespace Calculator.Service
                 inputEntries.AddRange(input.Split(DelimiterList.ToArray(), StringSplitOptions.None));
             }
 
-            List<int> numberEntries = new List<int>();
+            List<int> validNumberEntries = new List<int>();
             int validNumber;
             
             // Checking for valid inputs, if not a valid integer converting to default value (ex. 0)
@@ -81,15 +82,17 @@ namespace Calculator.Service
             {
                 if (int.TryParse(inputEntry.Trim(), out validNumber))
                 {
-                    numberEntries.Add(validNumber);
+                    validNumberEntries.Add(validNumber);
                 }
                 else
                 {
-                    numberEntries.Add(InvalidNumberEntryDefaultValue);
+                    validNumberEntries.Add(InvalidNumberEntryDefaultValue);
                 }
             }
 
-            return numberEntries;
+            ReplaceInvalidUpperBoundNumbers(validNumberEntries, FilterUpperBoundValue);
+
+            return validNumberEntries;
         }
 
         /// <summary>
@@ -173,7 +176,6 @@ namespace Calculator.Service
         /// Checking for negative numbers through the list and throwing an exception with those negative numbers included in the message
         /// 
         /// Exception:
-        /// 
         /// NegativeNumberException: if there are negative numbers in the set, providing those values in the message
         /// </summary>
         /// <param name="numbers"></param>
@@ -195,12 +197,18 @@ namespace Calculator.Service
         /// Removing values based on the predicate
         /// </summary>
         /// <param name="numbers">List of numbers to be filtered</param>
-        /// <param name="match">Condition of removal</param>
-        private void FilterNumbers(List<int> numbers, Predicate<int> match)
+        /// <param name="upperBoudValue">Upper bound value to be replaced by default (ex: 0)</param>
+        private void ReplaceInvalidUpperBoundNumbers(List<int> numbers, int upperBoudValue)
         {
             if (numbers != null)
             {
-               numbers.RemoveAll(match);
+                for (int i = 0; i < numbers.Count; i++)
+                {
+                    if (numbers[i] > upperBoudValue)
+                    {
+                        numbers[i] = InvalidNumberEntryDefaultValue;
+                    }
+                }
             }
         }
 
@@ -209,10 +217,11 @@ namespace Calculator.Service
         /// 
         /// Exceptions:
         /// 
-        /// 1) If the maximum constrains allowed is set to true in config file and there are more than two valid numbers, it will result
+        /// 1) ArguementException: If two numbers maximum constrains allowed is set to true in config file and there are more than two valid numbers, it will result
         ///    in an arguement exception
+        /// 2) NegativeNumberException: Any negative number will result in an exception containing the negative number entries
         /// </summary>
-        /// <param name="numbers">List of integer array</param>
+        /// <param name="numbers">List of positive integer array</param>
         /// <returns></returns>
         public int AddNumbers(List<int> numbers)
         {
@@ -222,8 +231,7 @@ namespace Calculator.Service
             // negative number constraint check
             CheckForNegativeNumbers(numbers);
 
-            FilterNumbers(numbers, num => num > FilteredUpperBoundValue);
-
+            
             // if list of integer entries greater than maximum allowed (ex. 2)
             if (AllowTwoNumbersMaxConstraint && numbers.Count > MaximumValidNumbersAllowed)
             {
