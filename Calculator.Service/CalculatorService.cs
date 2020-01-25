@@ -6,19 +6,20 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Collections.Generic;
-
+using System.Text.RegularExpressions;
 
 namespace Calculator.Service
 {
     public class CalculatorService : ICalculatorService
     {
+        private static Regex customSingleCharDelimiterRegex = new Regex(@"^\/\/(?<customSigleCharDelimiter>.)\n.+", RegexOptions.Compiled);
         // Variable declartion to be set in constructor
         private const string DefaultDelimeter = ",";
-        private readonly string InputDelimeters = null;
+        private readonly string PredefinedDelimeters = null;
         private readonly bool AllowTwoNumbersMaxConstraint;
         private readonly int MaximumValidNumbersAllowed;
         private readonly int InvalidNumberEntryDefaultValue;
-        private readonly int FilteredValue;
+        private readonly int FilteredUpperBoundValue;
         private readonly ILogger<CalculatorService> _logger;
 
         // Will load LoggerFactory and Configuration Root through Dependency injection (on application start up)
@@ -28,10 +29,10 @@ namespace Calculator.Service
 
             // Getting the app settings values
             AllowTwoNumbersMaxConstraint = configuration.GetValue<bool>("AppSettings:AllowTwoNumbersMaxConstraint");
-            InputDelimeters = configuration.GetValue<string>("AppSettings:InputDelimeters");
+            PredefinedDelimeters = configuration.GetValue<string>("AppSettings:InputDelimeters");
             MaximumValidNumbersAllowed = AllowTwoNumbersMaxConstraint ? configuration.GetValue<int>("AppSettings:MaximumValidNumbersAllowed") : 0;
             InvalidNumberEntryDefaultValue = configuration.GetValue<int>("AppSettings:InvalidNumberEntryDefaultValue");
-            FilteredValue = configuration.GetValue<int>("AppSettings:FilteredValue");
+            FilteredUpperBoundValue = configuration.GetValue<int>("AppSettings:FilteredUpperBoundValue");
         }
 
         /// <summary>
@@ -47,9 +48,11 @@ namespace Calculator.Service
         {
             if (string.IsNullOrEmpty(input))
                 return new List<int> { 0 };
-            
+
+            var customSingleCharDelimiter = ParseCustomSingleCharacterDelimiter(input);
+
             // using the config delimeter list provided to parse the input
-            string[] inputEntries = input.Split(InputDelimeters.ToCharArray());
+            string[] inputEntries = input.Split(string.Concat(PredefinedDelimeters, customSingleCharDelimiter).ToCharArray());
 
             List<int> numberEntries = new List<int>();
 
@@ -72,6 +75,37 @@ namespace Calculator.Service
         }
 
         /// <summary>
+        /// Parsing custom user define single character delimiter in following format //{delimiter}\n{numbers}
+        /// Please note that since there is a minimum of 4 characters needed to define a delimiter, the string
+        /// obviously need to be longer than 4 characters to define a number as well. The delimiter is matched
+        /// by following regex: ^\/\/(?<customSigleCharDelimiter>.)\n.+
+        /// and all the 4 characters used to define a delimiter is then removed in the string because these are
+        /// not needed for the further processing
+        /// </summary>
+        /// <param name="input">user input</param>
+        /// <returns>raw input without the custom delimiter 4 characters</returns>
+        public string ParseCustomSingleCharacterDelimiter(string input)
+        {
+            string customDelimiter = string.Empty;
+
+            // minimum 4 characters needed to define a custom single character delimiter
+            if(input.Length > 4)
+            {
+                //Matching the custom delimiter regex
+                Match delimiterMatch = customSingleCharDelimiterRegex.Match(input);
+
+                if(delimiterMatch.Success)
+                {
+                    // retreiving the delimiter and removing the 4 characters that no longer is needed
+                    customDelimiter = delimiterMatch.Groups["customSigleCharDelimiter"].Value;
+                    input = input.Replace(string.Concat(@"//", customDelimiter, "\n"), string.Empty);
+                }
+            }
+
+            return customDelimiter;
+        }
+
+        /// <summary>
         /// Checking for negative numbers through the list and throwing an exception with those negative numbers included in the message
         /// 
         /// Exception:
@@ -85,6 +119,7 @@ namespace Calculator.Service
             {
                 var negativeNumbers = numbers.Where(num => num < 0);
 
+                // if any negative number detected throwing an exception
                 if(negativeNumbers.Any())
                 {
                     throw new NegativeNumberException($"Constraint violation - Negative numbers are not allowed: {string.Join(",", negativeNumbers)}");
@@ -123,7 +158,7 @@ namespace Calculator.Service
             // negative number constraint check
             CheckForNegativeNumbers(numbers);
 
-            FilterNumbers(numbers, num => num > FilteredValue);
+            FilterNumbers(numbers, num => num > FilteredUpperBoundValue);
 
             // if list of integer entries greater than maximum allowed (ex. 2)
             if (AllowTwoNumbersMaxConstraint && numbers.Count > MaximumValidNumbersAllowed)
