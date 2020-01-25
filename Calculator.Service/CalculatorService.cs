@@ -3,8 +3,10 @@ using Calculator.Core.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Collections.Generic;
+
 
 namespace Calculator.Service
 {
@@ -16,7 +18,7 @@ namespace Calculator.Service
         private readonly bool AllowTwoNumbersMaxConstraint;
         private readonly int MaximumValidNumbersAllowed;
         private readonly int InvalidNumberEntryDefaultValue;
-        
+        private readonly int FilteredValue;
         private readonly ILogger<CalculatorService> _logger;
 
         // Will load LoggerFactory and Configuration Root through Dependency injection (on application start up)
@@ -29,6 +31,7 @@ namespace Calculator.Service
             InputDelimeters = configuration.GetValue<string>("AppSettings:InputDelimeters");
             MaximumValidNumbersAllowed = AllowTwoNumbersMaxConstraint ? configuration.GetValue<int>("AppSettings:MaximumValidNumbersAllowed") : 0;
             InvalidNumberEntryDefaultValue = configuration.GetValue<int>("AppSettings:InvalidNumberEntryDefaultValue");
+            FilteredValue = configuration.GetValue<int>("AppSettings:FilteredValue");
         }
 
         /// <summary>
@@ -40,10 +43,10 @@ namespace Calculator.Service
         /// </summary>
         /// <param name="input">user input</param>
         /// <returns>an array of valid integers</returns>
-        public int [] ParseInput(string input)
+        public List<int> ParseInput(string input)
         {
             if (string.IsNullOrEmpty(input))
-                return new int[] { 0 };
+                return new List<int> { 0 };
             
             // using the config delimeter list provided to parse the input
             string[] inputEntries = input.Split(InputDelimeters.ToCharArray());
@@ -65,10 +68,18 @@ namespace Calculator.Service
                 }
             }
 
-            return numberEntries.ToArray();
+            return numberEntries;
         }
 
-        private void CheckForNegativeNumbers(int[] numbers)
+        /// <summary>
+        /// Checking for negative numbers through the list and throwing an exception with those negative numbers included in the message
+        /// 
+        /// Exception:
+        /// 
+        /// NegativeNumberException: if there are negative numbers in the set, providing those values in the message
+        /// </summary>
+        /// <param name="numbers"></param>
+        private void CheckForNegativeNumbers(List<int> numbers)
         {
             if (numbers != null)
             {
@@ -80,6 +91,20 @@ namespace Calculator.Service
                 }
             }
         }
+
+        /// <summary>
+        /// Removing values based on the predicate
+        /// </summary>
+        /// <param name="numbers">List of numbers to be filtered</param>
+        /// <param name="match">Condition of removal</param>
+        private void FilterNumbers(List<int> numbers, Predicate<int> match)
+        {
+            if (numbers != null)
+            {
+               numbers.RemoveAll(match);
+            }
+        }
+
         /// <summary>
         /// This method will take an integer array of numbers and will use linq sum extension to iterate through % add them
         /// 
@@ -90,7 +115,7 @@ namespace Calculator.Service
         /// </summary>
         /// <param name="numbers">List of integer array</param>
         /// <returns></returns>
-        public int AddNumbers(int [] numbers)
+        public int AddNumbers(List<int> numbers)
         {
             if (numbers == null)
                 return 0;
@@ -98,8 +123,10 @@ namespace Calculator.Service
             // negative number constraint check
             CheckForNegativeNumbers(numbers);
 
+            FilterNumbers(numbers, num => num > FilteredValue);
+
             // if list of integer entries greater than maximum allowed (ex. 2)
-            if (AllowTwoNumbersMaxConstraint && numbers.Length > MaximumValidNumbersAllowed)
+            if (AllowTwoNumbersMaxConstraint && numbers.Count > MaximumValidNumbersAllowed)
             {
                 throw new ArgumentException($"constraint violation: only maximum {MaximumValidNumbersAllowed} numbers are allowed");
             }

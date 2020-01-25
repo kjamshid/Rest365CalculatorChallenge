@@ -54,13 +54,16 @@ namespace Calculator.UnitTests
             configurationSectionInputDelimeters.Setup(a => a.Value).Returns(",\n");
             _mockConfigurationRoot.Setup(a => a.GetSection(It.Is<string>(s => s == "AppSettings:InputDelimeters"))).Returns(configurationSectionInputDelimeters.Object);
 
-
             var configurationSectionInvalidEntry = new Mock<IConfigurationSection>();
             configurationSectionInvalidEntry.Setup(a => a.Value).Returns("0");
             _mockConfigurationRoot.Setup(a => a.GetSection(It.Is<string>(s => s == "AppSettings:InvalidNumberEntryDefaultValue"))).Returns(configurationSectionInvalidEntry.Object);
 
+            var configurationSectionFilteredValue = new Mock<IConfigurationSection>();
+            configurationSectionFilteredValue.Setup(a => a.Value).Returns("1000");
+            _mockConfigurationRoot.Setup(a => a.GetSection(It.Is<string>(s => s == "AppSettings:FilteredValue"))).Returns(configurationSectionFilteredValue.Object);
+
         }
-        
+
         [TestCase("100,200", 2, 300)]
         [TestCase("100,300", 2, 400)]
         [TestCase("100, ", 2, 100)]
@@ -87,9 +90,9 @@ namespace Calculator.UnitTests
             MockConfigurationsValues();
             SetServiceProvider(_mockConfigurationRoot.Object);
 
-            int[] numberEntries = _calculatorService.ParseInput(input);
+            var numberEntries = _calculatorService.ParseInput(input);
 
-            Assert.IsTrue(numberEntries.Length == length);
+            Assert.IsTrue(numberEntries.Count == length);
 
             var total = _calculatorService.AddNumbers(numberEntries);
 
@@ -97,16 +100,16 @@ namespace Calculator.UnitTests
         }
 
 
-        [TestCase("1000,1111,11111")]
-        [TestCase("1000, ,11111")]
-        [TestCase("1000,,11111")]
-        [TestCase("1000,1111,fdfdfd")]
+        [TestCase("10,111,111")]
+        [TestCase("100, ,111")]
+        [TestCase("100,,111")]
+        [TestCase("100,111,fdfdfd")]
         public void AddNumbers_TwoNumbersMaxLimit_ExceptionTests(string input)
         {
             MockConfigurationsValues();
             SetServiceProvider(_mockConfigurationRoot.Object);
 
-            int[] numberEntries = _calculatorService.ParseInput(input);
+            var numberEntries = _calculatorService.ParseInput(input);
 
             Assert.Throws<ArgumentException>(() => _calculatorService.AddNumbers(numberEntries));
         }
@@ -118,7 +121,8 @@ namespace Calculator.UnitTests
         public void AddNumbers_IgnoreTwoNumbersMaxLimit_PositiveTests(string input, int expectedResult)
         {
             SetServiceProvider();
-            int[] numberEntries = _calculatorService.ParseInput(input);
+
+            var numberEntries = _calculatorService.ParseInput(input);
 
             var total = _calculatorService.AddNumbers(numberEntries);
 
@@ -137,7 +141,7 @@ namespace Calculator.UnitTests
         {
             SetServiceProvider();
 
-            int[] numberEntries = _calculatorService.ParseInput(input);
+            var numberEntries = _calculatorService.ParseInput(input);
 
             var total = _calculatorService.AddNumbers(numberEntries);
 
@@ -158,7 +162,7 @@ namespace Calculator.UnitTests
 
             try
             {
-                int[] numberEntries = _calculatorService.ParseInput(input);
+                var numberEntries = _calculatorService.ParseInput(input);
                 _calculatorService.AddNumbers(numberEntries);
             }
             catch (Exception ex)
@@ -166,6 +170,26 @@ namespace Calculator.UnitTests
                 Assert.IsTrue(ex is NegativeNumberException);
                 Assert.IsTrue(ex.Message.EndsWith(expectedResult));
             }
+        }
+
+        [TestCase("1001", 0)]
+        [TestCase("1001,", 0)]
+        [TestCase("1001,1002", 0)]
+        [TestCase("999\n1000,1001", 1999)]
+        [TestCase("1,1001,2", 3)]
+        [TestCase("1,2,2001,1001", 3)]
+        [TestCase("1007,1001,1002,1002,1", 1)]
+        [TestCase(",1009,1001,\n,1004\n1002,, ", 0)]
+        [TestCase("1001,3,4,10001,\n,10002\n1002,, 7, , ", 14)]
+        public void AddNumber_FilteringValue_PositiveTests(string input, int expectedResult)
+        {
+            SetServiceProvider();
+
+            var numberEntries = _calculatorService.ParseInput(input);
+
+            var total = _calculatorService.AddNumbers(numberEntries);
+
+            Assert.AreEqual(total, expectedResult);
         }
     }
 }
