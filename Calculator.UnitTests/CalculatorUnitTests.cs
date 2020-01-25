@@ -1,3 +1,4 @@
+using Calculator.Common;
 using Calculator.Core.Interfaces;
 using Calculator.Service;
 using Microsoft.Extensions.Configuration;
@@ -9,11 +10,11 @@ using System.IO;
 
 namespace Calculator.UnitTests
 {
-    public class Tests
+    public class CalculatorUnitTests
     {
-        ICalculatorService calculatorService = null;
-        IServiceProvider serviceProvider = null;
-        Mock<IConfiguration> mockConfigurationRoot = null;
+        ICalculatorService _calculatorService = null;
+        IServiceProvider _serviceProvider = null;
+        Mock<IConfiguration> _mockConfigurationRoot = null;
 
         private void SetServiceProvider(IConfiguration configuration = null)
         {
@@ -27,76 +28,50 @@ namespace Calculator.UnitTests
                 configuration = builder.Build();
             }
 
-            serviceProvider = new ServiceCollection()
+            _serviceProvider = new ServiceCollection()
                         .AddLogging()
                         .AddSingleton<IConfiguration>(configuration)
                         .AddSingleton<ICalculatorService, CalculatorService>()
                         .BuildServiceProvider();
 
-            calculatorService = serviceProvider.GetService<ICalculatorService>();
+            _calculatorService = _serviceProvider.GetService<ICalculatorService>();
         }
 
         private void MockConfigurationsValues()
         {
-            mockConfigurationRoot = new Mock<IConfiguration>();
+            _mockConfigurationRoot = new Mock<IConfiguration>();
 
             //Overriding the two number max constraint and setting it to true and reseting the service provider
             var configurationSectionAllowMaxConstraint = new Mock<IConfigurationSection>();
             configurationSectionAllowMaxConstraint.Setup(a => a.Value).Returns("true");
-            mockConfigurationRoot.Setup(a => a.GetSection(It.Is<string>(s => s == "AppSettings:AllowTwoNumbersMaxConstraint"))).Returns(configurationSectionAllowMaxConstraint.Object);
+            _mockConfigurationRoot.Setup(a => a.GetSection(It.Is<string>(s => s == "AppSettings:AllowTwoNumbersMaxConstraint"))).Returns(configurationSectionAllowMaxConstraint.Object);
 
             var configurationSectionMaximumValidNumbersAllowed = new Mock<IConfigurationSection>();
             configurationSectionMaximumValidNumbersAllowed.Setup(a => a.Value).Returns("2");
-            mockConfigurationRoot.Setup(a => a.GetSection(It.Is<string>(s => s == "AppSettings:MaximumValidNumbersAllowed"))).Returns(configurationSectionMaximumValidNumbersAllowed.Object);
+            _mockConfigurationRoot.Setup(a => a.GetSection(It.Is<string>(s => s == "AppSettings:MaximumValidNumbersAllowed"))).Returns(configurationSectionMaximumValidNumbersAllowed.Object);
 
             var configurationSectionInputDelimeters = new Mock<IConfigurationSection>();
             configurationSectionInputDelimeters.Setup(a => a.Value).Returns(",\n");
-            mockConfigurationRoot.Setup(a => a.GetSection(It.Is<string>(s => s == "AppSettings:InputDelimeters"))).Returns(configurationSectionInputDelimeters.Object);
+            _mockConfigurationRoot.Setup(a => a.GetSection(It.Is<string>(s => s == "AppSettings:InputDelimeters"))).Returns(configurationSectionInputDelimeters.Object);
 
 
             var configurationSectionInvalidEntry = new Mock<IConfigurationSection>();
             configurationSectionInvalidEntry.Setup(a => a.Value).Returns("0");
-            mockConfigurationRoot.Setup(a => a.GetSection(It.Is<string>(s => s == "AppSettings:InvalidNumberEntryDefaultValue"))).Returns(configurationSectionInvalidEntry.Object);
+            _mockConfigurationRoot.Setup(a => a.GetSection(It.Is<string>(s => s == "AppSettings:InvalidNumberEntryDefaultValue"))).Returns(configurationSectionInvalidEntry.Object);
 
         }
-        [SetUp]
-        public void Setup()
-        {
-            
-            //mockConfigurationRoot.SetupGet(x => x["AppSettings:InputDelimeters"]).Returns(",");
-            //mockConfigurationRoot.SetupGet(x => x["AppSettings:MaximumValidNumbersAllowed"]).Returns("2");
-            //mockConfigurationRoot.SetupGet(x => x["AppSettings:InvalidNumberEntryDefaultValue"]).Returns("0");
-            //mockConfigurationRoot.SetupGet(x => x["AppSettings:AllowTwoNumbersMaxConstraint"]).Returns("false");
-
-            //  mockConfigurationRoot.SetupGet(x => x[It.Is<string>(s => s == "AppSettings:AllowTwoNumbersMaxConstraint")]).Returns("false");
-
-            //   mockConfSection.SetupGet(m => m[It.Is<string>(s => s == "default")]).Returns("mock value");
-
-            //mockConfigurationRoot.SetupGet(x => x[It.Is<string>(s => s == "AppSettings:InputDelimeters")]).Returns(",");
-            //mockConfigurationRoot.SetupGet(x => x[It.Is<string>(s => s == "AppSettings:MaximumValidNumbersAllowed")]).Returns("2");
-            //mockConfigurationRoot.SetupGet(x => x[It.Is<string>(s => s == "AppSettings:InvalidNumberEntryDefaultValue")]).Returns("0");
-
-            //mockConfigurationRoot.SetupGet(x => x[It.Is<string>(s => s == "AppSettings:AllowTwoNumbersMaxConstraint")]).Returns("false");
-            // mockConfigurationRoot.SetupGet(m => m[It.Is<string>(s => s == "AppSettings:AllowTwoNumbersMaxConstraint")]).Returns(configurationSection.Object);
-
-            // mockConfigurationRoot.Setup(a => a.GetSection("AppSettings:AllowTwoNumbersMaxConstraint")).Returns(configurationSection.Object);
-
-            //        mockConfigurationRoot.Setup(c => c.GetValue<string>("AppSettings:InputDelimeters"))
-            //.Returns(",");
-            //  .Verifiable();
-        }
-
+        
         [TestCase("100,200", 2, 300)]
         [TestCase("100,300", 2, 400)]
         [TestCase("100, ", 2, 100)]
         [TestCase("100,", 2, 100)]
         [TestCase("100 ", 1, 100)]
         [TestCase("100", 1, 100)]
-        [TestCase("-1", 1, -1)]
-        [TestCase("-1,-4", 2, -5)]
-        [TestCase("100,-4", 2, 96)]
-        [TestCase("100 , -4", 2, 96)]
-        [TestCase(" 100 , -4 ", 2, 96)]
+        [TestCase("1", 1, 1)]
+        [TestCase("1, 4", 2, 5)]
+        [TestCase("100, 4", 2, 104)]
+        [TestCase("100 , 4", 2, 104)]
+        [TestCase(" 100 , 4 ", 2, 104)]
         [TestCase("", 1, 0)]
         [TestCase(" ", 1, 0)]
         [TestCase(",", 2, 0)]
@@ -107,18 +82,18 @@ namespace Calculator.UnitTests
         [TestCase(", fdfddf", 2, 0)]
         [TestCase(" , fdfddf", 2, 0)]
         [TestCase(null, 1, 0)]
-        public void AddNumbers_TwoNumbersMaxLimit_PositiveTests(string input, int length, int result)
+        public void AddNumbers_TwoNumbersMaxLimit_PositiveTests(string input, int length, int expectedResult)
         {
             MockConfigurationsValues();
-            SetServiceProvider(mockConfigurationRoot.Object);
+            SetServiceProvider(_mockConfigurationRoot.Object);
 
-            int[] numberEntries = calculatorService.ParseInput(input);
+            int[] numberEntries = _calculatorService.ParseInput(input);
 
             Assert.IsTrue(numberEntries.Length == length);
 
-            var total = calculatorService.AddNumbers(numberEntries);
+            var total = _calculatorService.AddNumbers(numberEntries);
 
-            Assert.IsTrue(total == result);
+            Assert.IsTrue(total == expectedResult);
         }
 
 
@@ -129,25 +104,25 @@ namespace Calculator.UnitTests
         public void AddNumbers_TwoNumbersMaxLimit_ExceptionTests(string input)
         {
             MockConfigurationsValues();
-            SetServiceProvider(mockConfigurationRoot.Object);
+            SetServiceProvider(_mockConfigurationRoot.Object);
 
-            int[] numberEntries = calculatorService.ParseInput(input);
+            int[] numberEntries = _calculatorService.ParseInput(input);
 
-            Assert.Throws<ArgumentException>(() => calculatorService.AddNumbers(numberEntries));
+            Assert.Throws<ArgumentException>(() => _calculatorService.AddNumbers(numberEntries));
         }
 
         [TestCase("1,2,3", 6)]
         [TestCase("1, ,2", 3)]
         [TestCase("1,,2,3,4, ,6,7,jlj", 23)]
         [TestCase("1,2,3,4,5,6,7,8,9,10,11,12", 78)]
-        public void AddNumbers_IgnoreTwoNumbersMaxLimit_PositiveTests(string input, int result)
+        public void AddNumbers_IgnoreTwoNumbersMaxLimit_PositiveTests(string input, int expectedResult)
         {
             SetServiceProvider();
-            int[] numberEntries = calculatorService.ParseInput(input);
+            int[] numberEntries = _calculatorService.ParseInput(input);
 
-            var total = calculatorService.AddNumbers(numberEntries);
+            var total = _calculatorService.AddNumbers(numberEntries);
 
-            Assert.AreEqual(total, result);
+            Assert.AreEqual(total, expectedResult);
         }
 
         [TestCase("\n", 0)]
@@ -158,15 +133,39 @@ namespace Calculator.UnitTests
         [TestCase("1,\n,2", 3)]
         [TestCase("1\n2\n3", 6)]
         [TestCase("1\n,,2,3,hkhkh\n2,, ,6\n,7,jlj", 21)]
-        public void AddNumbers_IncludingNewLineDelimiter_PositiveTests(string input, int result)
+        public void AddNumbers_IncludingNewLineDelimiter_PositiveTests(string input, int expectedResult)
         {
             SetServiceProvider();
 
-            int[] numberEntries = calculatorService.ParseInput(input);
+            int[] numberEntries = _calculatorService.ParseInput(input);
 
-            var total = calculatorService.AddNumbers(numberEntries);
+            var total = _calculatorService.AddNumbers(numberEntries);
 
-            Assert.AreEqual(total, result);
+            Assert.AreEqual(total, expectedResult);
+        }
+
+        [TestCase("-1", "-1")]
+        [TestCase("-1\n", "-1")]
+        [TestCase("-1\n,", "-1")]
+        [TestCase("-1\n-2", "-1,-2")]
+        [TestCase("-1\n,-2", "-1,-2")]
+        [TestCase("1\n2,-3", "-3")]
+        [TestCase("1,-2,-3,4,-5", "-2,-3,-5")]
+        [TestCase("1\n-2\n3,-10,-1,-2", "-2,-10,-1,-2")]
+        public void AddNumber_NegativeNumberConstraintViolation_ExceptionTests(string input, string expectedResult)
+        {
+            SetServiceProvider();
+
+            try
+            {
+                int[] numberEntries = _calculatorService.ParseInput(input);
+                _calculatorService.AddNumbers(numberEntries);
+            }
+            catch (Exception ex)
+            {
+                Assert.IsTrue(ex is NegativeNumberException);
+                Assert.IsTrue(ex.Message.EndsWith(expectedResult));
+            }
         }
     }
 }

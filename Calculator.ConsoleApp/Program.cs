@@ -44,6 +44,9 @@ namespace Calculator.ConsoleApp
 
         }
 
+        /// <summary>
+        /// Initial setup of the application which includes loading the app settings config file and registering the dependency injections with appropriate life cylcle
+        /// </summary>
         private static void StartupApp()
         {
             configuration = LoadAppSettingsConfig();
@@ -68,6 +71,11 @@ namespace Calculator.ConsoleApp
             return configuration;
         }
 
+        /// <summary>
+        /// configuring logging with the relative log level (default = debug mode)
+        /// </summary>
+        /// <param name="configuration"></param>
+        /// <returns></returns>
         private static ILoggerFactory ConfigureLogging(IConfiguration configuration)
         {
             // Setting the default log level from config
@@ -84,7 +92,7 @@ namespace Calculator.ConsoleApp
             var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder
-                    .AddFilter("LoggingConsoleApp.Program", defaultLogLevel)
+                    .AddFilter("Calculator.ConsoleApp.Program", defaultLogLevel)
                     .AddConsole();
             });
 

@@ -1,4 +1,5 @@
-﻿using Calculator.Core.Interfaces;
+﻿using Calculator.Common;
+using Calculator.Core.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
@@ -47,7 +48,7 @@ namespace Calculator.Service
             // using the config delimeter list provided to parse the input
             string[] inputEntries = input.Split(InputDelimeters.ToCharArray());
 
-            List<int> validNumbers = new List<int>();
+            List<int> numberEntries = new List<int>();
 
             int validNumber;
             
@@ -56,18 +57,29 @@ namespace Calculator.Service
             {
                 if (int.TryParse(inputEntry.Trim(), out validNumber))
                 {
-                    validNumbers.Add(validNumber);
+                    numberEntries.Add(validNumber);
                 }
                 else
                 {
-                    validNumbers.Add(InvalidNumberEntryDefaultValue);
+                    numberEntries.Add(InvalidNumberEntryDefaultValue);
                 }
             }
 
-
-            return validNumbers.ToArray();
+            return numberEntries.ToArray();
         }
 
+        private void CheckForNegativeNumbers(int[] numbers)
+        {
+            if (numbers != null)
+            {
+                var negativeNumbers = numbers.Where(num => num < 0);
+
+                if(negativeNumbers.Any())
+                {
+                    throw new NegativeNumberException($"Constraint violation - Negative numbers are not allowed: {string.Join(",", negativeNumbers)}");
+                }
+            }
+        }
         /// <summary>
         /// This method will take an integer array of numbers and will use linq sum extension to iterate through % add them
         /// 
@@ -82,6 +94,9 @@ namespace Calculator.Service
         {
             if (numbers == null)
                 return 0;
+
+            // negative number constraint check
+            CheckForNegativeNumbers(numbers);
 
             // if list of integer entries greater than maximum allowed (ex. 2)
             if (AllowTwoNumbersMaxConstraint && numbers.Length > MaximumValidNumbersAllowed)
