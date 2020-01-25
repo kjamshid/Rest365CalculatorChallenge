@@ -10,25 +10,72 @@ namespace Calculator.ConsoleApp
 {
     class Program
     {
+        private static IConfigurationRoot configuration = null;
+        private static IServiceProvider serviceProvider = null;
         static void Main(string[] args)
+        {
+            ICalculatorService calculatorService = null;
+            StartupApp();
+
+            var loggerFactory = ConfigureLogging(configuration);
+            var logger = loggerFactory.CreateLogger<Program>();
+
+            logger.LogDebug("Starting application");
+
+            // Prompting user to enter two numbers
+            Console.WriteLine("Please enter two numbers to be added (comma separated)");
+            string userInput = Console.ReadLine();
+
+            try
             {
-            //setup our DI
-            var serviceProvider = new ServiceCollection()
+                // Calling calcultor serivce to get the sum
+                calculatorService = serviceProvider.GetService<ICalculatorService>();
+
+                int[] numbers = calculatorService.ParseInput(userInput);
+
+                Console.WriteLine($"The addition of the following entries {string.Join(",", numbers)} is {calculatorService.AddNumbers(numbers)}");
+
+                Console.ReadLine();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Invalid input {ex.Message}");
+            }
+
+        }
+
+        private static void StartupApp()
+        {
+            configuration = LoadAppSettingsConfig();
+
+            //setup our Dependency Injection for internal logging, and calculator service
+            serviceProvider = new ServiceCollection()
                 .AddLogging()
+                .AddSingleton<IConfiguration>(configuration)
                 .AddSingleton<ICalculatorService, CalculatorService>()
                 .BuildServiceProvider();
+        }
 
+        private static IConfigurationRoot LoadAppSettingsConfig()
+        {
+            // Logging the appsettings.json file
             var builder = new ConfigurationBuilder()
                             .SetBasePath(Directory.GetCurrentDirectory())
                             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
 
             IConfigurationRoot configuration = builder.Build();
 
+            return configuration;
+        }
+
+        private static ILoggerFactory ConfigureLogging(IConfiguration configuration)
+        {
+            // Setting the default log level from config
             string confgLogLevel = configuration.GetSection("Logging").GetSection("LogLevel").Value;
 
             LogLevel defaultLogLevel;
-
-            if(!Enum.TryParse(confgLogLevel, true, out defaultLogLevel))
+            
+            if (!Enum.TryParse(confgLogLevel, true, out defaultLogLevel))
             {
                 defaultLogLevel = LogLevel.Debug;
             }
@@ -40,28 +87,9 @@ namespace Calculator.ConsoleApp
                     .AddFilter("LoggingConsoleApp.Program", defaultLogLevel)
                     .AddConsole();
             });
-            
-            var logger = loggerFactory.CreateLogger<Program>();
 
-            logger.LogDebug("Starting application");
-
-            Console.WriteLine("Please enter two numbers to be added (comma separated)");
-            string userInput = Console.ReadLine();
-
-            ICalculatorService calculatorService = null;
-            try
-            {
-                calculatorService = serviceProvider.GetService<ICalculatorService>();
-
-                int[] numbers = calculatorService.processInput(userInput);
-
-                Console.WriteLine($"The addition of {string.Join(",", numbers)} is {calculatorService.AddNumbers(numbers)}");
-            }
-            catch(Exception ex)
-            {
-                Console.WriteLine($"Invalid input {ex.Message}");
-            }
-
+            return loggerFactory;
         }
+
     }
 }

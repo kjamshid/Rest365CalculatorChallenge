@@ -6,7 +6,7 @@ namespace Calculator.Core.Interfaces
 {
     public interface ICalculatorService
     {
-        int[] processInput(string input);
+        int[] ParseInput(string input);
         int AddNumbers(int[] numbers);
 
     }
