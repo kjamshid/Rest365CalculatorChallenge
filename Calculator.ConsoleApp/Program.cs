@@ -4,43 +4,67 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 
 namespace Calculator.ConsoleApp
 {
     class Program
     {
+        // Global variable declaration
+        private static bool _Cancelled = false;
         private static IConfigurationRoot _configuration = null;
         private static IServiceProvider _serviceProvider = null;
+        private static ILogger<Program> _logger = null;
+
         static void Main(string[] args)
         {
             ICalculatorService calculatorService = null;
+        
+            // Starting the application with by loading config file and registering logging and services
             StartupApp();
 
             var loggerFactory = ConfigureLogging(_configuration);
-            var logger = loggerFactory.CreateLogger<Program>();
+            _logger = loggerFactory.CreateLogger<Program>();
 
-            logger.LogDebug("Starting application");
+            _logger.LogInformation("Starting application");
 
-            // Prompting user to enter two numbers
-            Console.WriteLine("Please enter two numbers to be added (comma separated)");
-            string userInput = Console.ReadLine();
+            // capturing ctrl + c (user entry) and exiting application
+            Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
 
             try
             {
                 // Calling calcultor serivce to get the sum
                 calculatorService = _serviceProvider.GetService<ICalculatorService>();
+                string userInput = string.Empty;
+                List<int> numbers = new List<int>();
+                while (true)
+                {
+                    // Prompting user to enter two numbers to add and reading the input
+                    Console.WriteLine("***********************************************************************");
+                    Console.WriteLine("Please enter two numbers to add separated by comma or newline (, or \\n)");
+                    userInput = Console.ReadLine();
 
-                var numbers = calculatorService.ParseValidNumbersFromInput(userInput);
+                    if (_Cancelled || userInput == null) break; // if ctrl + c entered, breaking from loop
 
-                Console.WriteLine($"The addition of the following entries {string.Join("+", numbers)} is {calculatorService.AddNumbers(numbers)}");
+                    // parsing the input and grabbing the valid entries based on requirements
+                    numbers = calculatorService.ParseValidNumbersFromInput(userInput);
 
-                Console.ReadLine();
+                    Console.WriteLine();
+                    // displaying to users the result
+                    Console.WriteLine($"The addition of the following entries {string.Join("+", numbers)} is {calculatorService.AddNumbers(numbers)}");
+                    Console.WriteLine();
+                }
+               
+                // Removing the cancel key
+                Console.CancelKeyPress -= new ConsoleCancelEventHandler(Console_CancelKeyPress);
+                _logger.LogInformation("Exiting application");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Invalid input {ex.Message}");
-            }
+            }   
 
         }
 
@@ -92,12 +116,28 @@ namespace Calculator.ConsoleApp
             var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder
-                    .AddFilter("Calculator.ConsoleApp.Program", defaultLogLevel)
+                    .AddFilter("ConsoleApp.Program", defaultLogLevel)
                     .AddConsole();
             });
 
             return loggerFactory;
         }
 
+        /// <summary>
+        /// Capturing ctrl + c if entered by user
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            if (e.SpecialKey == ConsoleSpecialKey.ControlC)
+            {
+                Console.WriteLine("Cancelling");
+                _Cancelled = true;
+                e.Cancel = true;
+            }
+        }
+
     }
 }
+
