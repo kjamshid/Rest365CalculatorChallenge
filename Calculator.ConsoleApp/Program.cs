@@ -31,7 +31,7 @@ namespace Calculator.ConsoleApp
                 // Calling calcultor serivce to get the sum
                 calculatorService = serviceProvider.GetService<ICalculatorService>();
 
-                var numbers = calculatorService.ParseInput(userInput);
+                var numbers = calculatorService.ParseValidNumbersFromInput(userInput);
 
                 Console.WriteLine($"The addition of the following entries {string.Join(",", numbers)} is {calculatorService.AddNumbers(numbers)}");
 

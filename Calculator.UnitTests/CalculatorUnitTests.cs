@@ -51,7 +51,7 @@ namespace Calculator.UnitTests
             _mockConfigurationRoot.Setup(a => a.GetSection(It.Is<string>(s => s == "AppSettings:MaximumValidNumbersAllowed"))).Returns(configurationSectionMaximumValidNumbersAllowed.Object);
 
             var configurationSectionInputDelimeters = new Mock<IConfigurationSection>();
-            configurationSectionInputDelimeters.Setup(a => a.Value).Returns(",\n");
+            configurationSectionInputDelimeters.Setup(a => a.Value).Returns(",|\n");
             _mockConfigurationRoot.Setup(a => a.GetSection(It.Is<string>(s => s == "AppSettings:InputDelimeters"))).Returns(configurationSectionInputDelimeters.Object);
 
             var configurationSectionInvalidEntry = new Mock<IConfigurationSection>();
@@ -90,7 +90,7 @@ namespace Calculator.UnitTests
             MockConfigurationsValues();
             SetServiceProvider(_mockConfigurationRoot.Object);
 
-            var numberEntries = _calculatorService.ParseInput(input);
+            var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
             Assert.IsTrue(numberEntries.Count == length);
 
@@ -109,7 +109,7 @@ namespace Calculator.UnitTests
             MockConfigurationsValues();
             SetServiceProvider(_mockConfigurationRoot.Object);
 
-            var numberEntries = _calculatorService.ParseInput(input);
+            var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
             Assert.Throws<ArgumentException>(() => _calculatorService.AddNumbers(numberEntries));
         }
@@ -122,7 +122,7 @@ namespace Calculator.UnitTests
         {
             SetServiceProvider();
 
-            var numberEntries = _calculatorService.ParseInput(input);
+            var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
             var total = _calculatorService.AddNumbers(numberEntries);
 
@@ -141,7 +141,7 @@ namespace Calculator.UnitTests
         {
             SetServiceProvider();
 
-            var numberEntries = _calculatorService.ParseInput(input);
+            var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
             var total = _calculatorService.AddNumbers(numberEntries);
 
@@ -162,7 +162,7 @@ namespace Calculator.UnitTests
 
             try
             {
-                var numberEntries = _calculatorService.ParseInput(input);
+                var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
                 _calculatorService.AddNumbers(numberEntries);
             }
             catch (Exception ex)
@@ -185,7 +185,7 @@ namespace Calculator.UnitTests
         {
             SetServiceProvider();
 
-            var numberEntries = _calculatorService.ParseInput(input);
+            var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
             var total = _calculatorService.AddNumbers(numberEntries);
 
@@ -200,11 +200,11 @@ namespace Calculator.UnitTests
         [TestCase("//#\n1#2,3\n4#5,, #", 15)]
         [TestCase("//.\n1.2,3\n4.5", 15)]
         [TestCase("//,\n2,ff,100", 102)]
-        public void AddNumber_CustomDelimiter_PositiveTests(string input, int expectedResult)
+        public void AddNumber_CustomSingleCharDelimiter_PositiveTests(string input, int expectedResult)
         {
             SetServiceProvider();
 
-            var numberEntries = _calculatorService.ParseInput(input);
+            var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
             var total = _calculatorService.AddNumbers(numberEntries);
 
@@ -215,6 +215,11 @@ namespace Calculator.UnitTests
         [TestCase("//#", 0)]
         [TestCase("//#1", 0)]
         [TestCase("//\n1", 1)]
+        [TestCase("//#\n1", 1)]
+        [TestCase("//#\n1,fdfdd", 1)]
+        [TestCase("//#\n1\n", 1)]
+        [TestCase("//#\n1\n2", 3)]
+        [TestCase("//#\n1,2", 3)]
         [TestCase("//#fddfd", 0)]
         [TestCase("//#fddfd#1", 0)]
         [TestCase("/#\n1#fdfdfd", 0)]
@@ -222,11 +227,68 @@ namespace Calculator.UnitTests
         [TestCase("//.\\n1.2,3\n4.5", 3)]
         [TestCase("//#2,ff,100", 100)]
         [TestCase("//\n#12,ff,100", 100)]
-        public void AddNumber_CustomDelimiter_NegativeTests(string input, int expectedResult)
+        public void AddNumber_CustomSingleCharDelimiter_NegativeTests(string input, int expectedResult)
         {
             SetServiceProvider();
 
-            var numberEntries = _calculatorService.ParseInput(input);
+            var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
+
+            var total = _calculatorService.AddNumbers(numberEntries);
+
+            Assert.AreEqual(total, expectedResult);
+        }
+
+
+        [TestCase("//[#]\n", 0)]
+        [TestCase("//[##]\n", 0)]
+        [TestCase("//[###]\n", 0)]
+        [TestCase("//[###]\n1", 1)]
+        [TestCase("//[##]\n##", 0)]
+        [TestCase("//[###]\n###", 0)]
+        [TestCase("//[#]\n1#2,hkhkh", 3)]
+        [TestCase("//[#]\n1#2#3,hkhkh", 6)]
+        [TestCase("//[#]\n1#2#3#4#5", 15)]
+        [TestCase("//[#]\n1#2#3#4,#5", 15)]
+        [TestCase("//[#]\n1#2,#\n3,4,#5\n", 15)]
+        [TestCase("//[#]\n1##2##3##4##5", 15)]
+        [TestCase("//[##]\n1##2,hkhkh", 3)]
+        [TestCase("//[##]\n1##2##3,hkhkh", 6)]
+        [TestCase("//[##]\n1##2##3##4##5", 15)]
+        [TestCase("//[##]\n1##2##3##4,##5", 15)]
+        [TestCase("//[##]\n1##2,##\n3,4,##5\n", 15)]
+        [TestCase("//[###]\n1###2,hkhkh", 3)]
+        [TestCase("//[###]\n1###2###3,hkhkh", 6)]
+        [TestCase("//[###]\n1###2###3###4###5", 15)]
+        [TestCase("//[###]\n1###2###3###4,###5", 15)]
+        [TestCase("//[###]\n1###2,###\n3,4,###5\n", 15)]
+        [TestCase("//[###]\n1###2###3,4,###5\n", 15)]
+        [TestCase("//[###]\n1###2###3,4,######5\n6,,", 21)]
+        [TestCase("//[###]\n1###2###3,4,######5\n6,, ", 21)]
+        public void AddNumber_CustomMultiLengthDelimiter_PositiveTests(string input, int expectedResult)
+        {
+            SetServiceProvider();
+
+            var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
+
+            var total = _calculatorService.AddNumbers(numberEntries);
+
+            Assert.AreEqual(total, expectedResult);
+        }
+
+
+        [TestCase("//[#]", 0)]
+        [TestCase("//[###]\n1##", 0)]
+        [TestCase("//[#]\n12,hkhkh", 12)]
+        [TestCase("//[#]1,2,3,hkhkh", 5)]
+        [TestCase("//[#]\n1#2#3#4#5", 15)]
+        [TestCase("//[##]\n1#2#3#4,#5", 0)]
+        [TestCase("//[***]\n1#2,#\n3,4,#5\n", 7)]
+        [TestCase("//[##]\n1###2,hkhkh", 1)]
+        public void AddNumber_CustomMultiLengthDelimiter_NegativeTests(string input, int expectedResult)
+        {
+            SetServiceProvider();
+
+            var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
             var total = _calculatorService.AddNumbers(numberEntries);
 
