@@ -251,7 +251,7 @@ namespace Calculator.Service
             
             for(int i = 0; i < numbers.Count; i++)
             {
-                if (numbers[i] == 0) continue;
+                if (operation != '*' && numbers[i] == 0) continue;
 
                 if (i == 0)
                 {
