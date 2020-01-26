@@ -1,12 +1,11 @@
-﻿using System;
+﻿using Calculator.Common;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Calculator.Core.Interfaces
 {
     public interface ICalculatorService
     {
-        List<int> ParseValidNumbersFromInput(string input);
+        List<int> ParseValidNumbersFromInput(string input, CmdOptions options = null);
         int AddNumbers(List<int> numbers);
 
     }

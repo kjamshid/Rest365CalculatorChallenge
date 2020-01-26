@@ -1,12 +1,14 @@
-﻿using Calculator.Core.Interfaces;
+﻿using Calculator.Common;
+using Calculator.Core.Interfaces;
 using Calculator.Service;
+using CommandLine;
+using CommandLine.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 
 namespace Calculator.ConsoleApp
 {
@@ -20,8 +22,37 @@ namespace Calculator.ConsoleApp
 
         static void Main(string[] args)
         {
+            CmdOptions cmdOptions = null;
+            // capturing ctrl + c (user entry) and exiting application
+            Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
+
+            // processing the command line arguements
+            var parseResults = Parser.Default.ParseArguments<CmdOptions>(args);
+
+            parseResults.WithParsed(options => {
+
+                if (options.Help)
+                {
+                    Console.WriteLine(string.Concat(HelpText.AutoBuild(parseResults, _ => _, _ => _)), options.GetUsage);
+                    Console.WriteLine("Press any key to continue...");
+                    Console.Read();
+                    Environment.Exit(0);
+                }
+
+                cmdOptions = options;    
+            });
+
+
+            // on error, the help menu is displayed
+            parseResults.WithNotParsed<CmdOptions>(errs =>
+            {
+                Console.WriteLine("Press any key to continue...");
+                Console.Read();
+                Environment.Exit(-1);
+            });
+            
             ICalculatorService calculatorService = null;
-        
+            
             // Starting the application with by loading config file and registering logging and services
             StartupApp();
 
@@ -30,8 +61,6 @@ namespace Calculator.ConsoleApp
 
             _logger.LogInformation("Starting application");
 
-            // capturing ctrl + c (user entry) and exiting application
-            Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
 
             try
             {
@@ -49,7 +78,7 @@ namespace Calculator.ConsoleApp
                     if (_Cancelled || userInput == null) break; // if ctrl + c entered, breaking from loop
 
                     // parsing the input and grabbing the valid entries based on requirements
-                    numbers = calculatorService.ParseValidNumbersFromInput(userInput);
+                    numbers = calculatorService.ParseValidNumbersFromInput(userInput, cmdOptions);
 
                     Console.WriteLine();
                     // displaying to users the result
@@ -126,8 +155,8 @@ namespace Calculator.ConsoleApp
         /// <summary>
         /// Capturing ctrl + c if entered by user
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
+        /// <param name="sender">the object that generates the event</param>
+        /// <param name="e">events entered</param>
         static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
             if (e.SpecialKey == ConsoleSpecialKey.ControlC)
@@ -137,7 +166,6 @@ namespace Calculator.ConsoleApp
                 e.Cancel = true;
             }
         }
-
     }
 }
 

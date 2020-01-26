@@ -4,7 +4,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
@@ -46,7 +45,7 @@ namespace Calculator.Service
         /// </summary>
         /// <param name="input">user raw input</param>
         /// <returns>an array of valid integers</returns>
-        public List<int> ParseValidNumbersFromInput(string input)
+        public List<int> ParseValidNumbersFromInput(string input, CmdOptions options = null)
         {
             if (string.IsNullOrEmpty(input))
                 return new List<int> { 0 };
@@ -56,6 +55,8 @@ namespace Calculator.Service
             List<string> DelimiterList = new List<string>();
             if (!string.IsNullOrEmpty(input))
             {
+                DelimiterList.AddRange(PredefinedDelimeters.Split('|'));
+
                 // combining all the delimiters into one string array list
                 var customSingleCharDelimiter = ParseSingleCharCustomDelimiter(input);
                 
@@ -68,7 +69,11 @@ namespace Calculator.Service
                     DelimiterList.AddRange(ParseMultiCharCustomDelimiters(input));
                 }
 
-                DelimiterList.AddRange(PredefinedDelimeters.Split('|'));
+                
+                if(options?.Delimiter != null && !DelimiterList.Contains(options.Delimiter))
+                {
+                    DelimiterList.Add(options.Delimiter);
+                }
 
                 // parse the input using the config delimeter list along with custom user defined ones above
                 inputEntries.AddRange(input.Split(DelimiterList.ToArray(), StringSplitOptions.None));
@@ -90,7 +95,14 @@ namespace Calculator.Service
                 }
             }
 
-            ReplaceInvalidUpperBoundNumbers(validNumberEntries, FilterUpperBoundValue);
+            int upperBoundValue = (options == null || options.UpperBound <= 0) ? FilterUpperBoundValue : options.UpperBound;
+            ReplaceInvalidUpperBoundNumbers(validNumberEntries, upperBoundValue);
+
+            if (options == null || !options.AllowNegative)
+            {
+                // negative number constraint check
+                CheckForNegativeNumbers(validNumberEntries);
+            }
 
             return validNumberEntries;
         }
@@ -227,10 +239,6 @@ namespace Calculator.Service
         {
             if (numbers == null)
                 return 0;
-
-            // negative number constraint check
-            CheckForNegativeNumbers(numbers);
-
             
             // if list of integer entries greater than maximum allowed (ex. 2)
             if (AllowTwoNumbersMaxConstraint && numbers.Count > MaximumValidNumbersAllowed)

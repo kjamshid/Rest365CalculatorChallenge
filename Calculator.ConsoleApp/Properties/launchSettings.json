@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Calculator.ConsoleApp": {
+      "commandName": "Project",
+      "commandLineArgs": " -d \";\""
+    }
+  }
+}
