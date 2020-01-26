@@ -94,7 +94,7 @@ namespace Calculator.UnitTests
 
             Assert.IsTrue(numberEntries.Count == length);
 
-            var total = _calculatorService.AddNumbers(numberEntries);
+            var total = _calculatorService.PerformOperationOnNumbers(numberEntries);
 
             Assert.IsTrue(total == expectedResult);
         }
@@ -111,7 +111,7 @@ namespace Calculator.UnitTests
 
             var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
-            Assert.Throws<ArgumentException>(() => _calculatorService.AddNumbers(numberEntries));
+            Assert.Throws<ArgumentException>(() => _calculatorService.PerformOperationOnNumbers(numberEntries));
         }
 
         [TestCase("1,2,3", 6)]
@@ -124,7 +124,7 @@ namespace Calculator.UnitTests
 
             var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
-            var total = _calculatorService.AddNumbers(numberEntries);
+            var total = _calculatorService.PerformOperationOnNumbers(numberEntries);
 
             Assert.AreEqual(total, expectedResult);
         }
@@ -143,7 +143,7 @@ namespace Calculator.UnitTests
 
             var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
-            var total = _calculatorService.AddNumbers(numberEntries);
+            var total = _calculatorService.PerformOperationOnNumbers(numberEntries);
 
             Assert.AreEqual(total, expectedResult);
         }
@@ -163,7 +163,7 @@ namespace Calculator.UnitTests
             try
             {
                 var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
-                _calculatorService.AddNumbers(numberEntries);
+                _calculatorService.PerformOperationOnNumbers(numberEntries);
             }
             catch (Exception ex)
             {
@@ -187,7 +187,7 @@ namespace Calculator.UnitTests
 
             var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
-            var total = _calculatorService.AddNumbers(numberEntries);
+            var total = _calculatorService.PerformOperationOnNumbers(numberEntries);
 
             Assert.AreEqual(total, expectedResult);
         }
@@ -206,7 +206,7 @@ namespace Calculator.UnitTests
 
             var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
-            var total = _calculatorService.AddNumbers(numberEntries);
+            var total = _calculatorService.PerformOperationOnNumbers(numberEntries);
 
             Assert.AreEqual(total, expectedResult);
         }
@@ -233,7 +233,7 @@ namespace Calculator.UnitTests
 
             var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
-            var total = _calculatorService.AddNumbers(numberEntries);
+            var total = _calculatorService.PerformOperationOnNumbers(numberEntries);
 
             Assert.AreEqual(total, expectedResult);
         }
@@ -270,7 +270,7 @@ namespace Calculator.UnitTests
 
             var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
-            var total = _calculatorService.AddNumbers(numberEntries);
+            var total = _calculatorService.PerformOperationOnNumbers(numberEntries);
 
             Assert.AreEqual(total, expectedResult);
         }
@@ -290,7 +290,7 @@ namespace Calculator.UnitTests
 
             var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
-            var total = _calculatorService.AddNumbers(numberEntries);
+            var total = _calculatorService.PerformOperationOnNumbers(numberEntries);
 
             Assert.AreEqual(total, expectedResult);
         }
@@ -325,7 +325,7 @@ namespace Calculator.UnitTests
 
             var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
-            var total = _calculatorService.AddNumbers(numberEntries);
+            var total = _calculatorService.PerformOperationOnNumbers(numberEntries);
 
             Assert.AreEqual(total, expectedResult);
         }
@@ -354,7 +354,7 @@ namespace Calculator.UnitTests
 
             var numberEntries = _calculatorService.ParseValidNumbersFromInput(input);
 
-            var total = _calculatorService.AddNumbers(numberEntries);
+            var total = _calculatorService.PerformOperationOnNumbers(numberEntries);
 
             Assert.AreEqual(total, expectedResult);
         }

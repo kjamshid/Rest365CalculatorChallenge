@@ -225,7 +225,8 @@ namespace Calculator.Service
         }
 
         /// <summary>
-        /// This method will take an integer array of numbers and will use linq sum extension to iterate through % add them
+        /// This method will take an integer array of numbers and based on operation parameter passed will perform addition, subtraction, division
+        /// or multipication on the numbers, the default operation is addition
         /// 
         /// Exceptions:
         /// 
@@ -235,7 +236,7 @@ namespace Calculator.Service
         /// </summary>
         /// <param name="numbers">List of positive integer array</param>
         /// <returns></returns>
-        public int AddNumbers(List<int> numbers)
+        public int PerformOperationOnNumbers(List<int> numbers, char operation = '+')
         {
             if (numbers == null)
                 return 0;
@@ -246,7 +247,39 @@ namespace Calculator.Service
                 throw new ArgumentException($"constraint violation: only maximum {MaximumValidNumbersAllowed} numbers are allowed");
             }
 
-            return numbers.Sum();
+            int total = 0;
+            
+            for(int i = 0; i < numbers.Count; i++)
+            {
+                if (numbers[i] == 0) continue;
+
+                if (i == 0)
+                {
+                    total = numbers[i];
+                    continue;
+                }
+
+                switch(operation)
+                {
+                    case '+':
+                        total += numbers[i];
+                        break;
+                    case '-':
+                        total -= numbers[i];
+                        break;
+                    case '*':
+                        total *= numbers[i];
+                        break;
+                    case '/':
+                        total /= numbers[i];
+                        break;
+                    default:
+                        total += numbers[i];
+                        break;
+                }
+            }
+
+            return total;
         }
 
     }

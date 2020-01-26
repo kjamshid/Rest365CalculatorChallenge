@@ -20,6 +20,15 @@ namespace Calculator.ConsoleApp
         private static IServiceProvider _serviceProvider = null;
         private static ILogger<Program> _logger = null;
 
+        private static Dictionary<char, string> Operations = new Dictionary<char, string>()
+        {
+            { '+', "addition" },
+            { '-', "subtraction" },
+            { '*', "multiplication" },
+            { '/', "division " }
+        };
+
+
         static void Main(string[] args)
         {
             CmdOptions cmdOptions = null;
@@ -72,17 +81,35 @@ namespace Calculator.ConsoleApp
                 {
                     // Prompting user to enter two numbers to add and reading the input
                     Console.WriteLine("***********************************************************************");
-                    Console.WriteLine("Please enter two numbers to add separated by comma or newline (, or \\n)");
+                    Console.WriteLine("Please enter two number separated by comma or newline (, or \\n)");
                     userInput = Console.ReadLine();
 
+                    bool invalidEntry = true;
+                    string operationEntry;
                     if (_Cancelled || userInput == null) break; // if ctrl + c entered, breaking from loop
+                    do
+                    {
+                        Console.WriteLine("Please enter an opertion:");
+                        Console.WriteLine("\t+ for additon:");
+                        Console.WriteLine("\t- for subtraction:");
+                        Console.WriteLine("\t* for multiplication:");
+                        Console.WriteLine("\t/ for division:");
+                        operationEntry = Console.ReadLine()?.Trim();
+
+                        if (_Cancelled || operationEntry == null) break; // if ctrl + c entered, breaking from loop
+
+                        invalidEntry = !Operations.ContainsKey(operationEntry[0]);
+
+
+                    } while (invalidEntry);
+                    
 
                     // parsing the input and grabbing the valid entries based on requirements
                     numbers = calculatorService.ParseValidNumbersFromInput(userInput, cmdOptions);
 
                     Console.WriteLine();
                     // displaying to users the result
-                    Console.WriteLine($"The addition of the following entries {string.Join("+", numbers)} is {calculatorService.AddNumbers(numbers)}");
+                    Console.WriteLine($"The {Operations[operationEntry[0]]} of the following entries {string.Join(operationEntry[0], numbers)} is {calculatorService.PerformOperationOnNumbers(numbers, operationEntry[0])}");
                     Console.WriteLine();
                 }
                
